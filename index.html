@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LULLABY</title>
+    <link rel="icon" type="image/png" sizes="256x256" href="assets/icons/Cat 256x256.ico">
+    <link rel="stylesheet" href="assets/fonts.css">
+    <link rel="stylesheet" href="assets/main.css">
+    <style>
+        .game-container { display: none; margin-top: 20px; }
+        .players-list { background: #f9f9f9; padding: 15px; border-radius: 4px; margin-top: 15px; }
+        .player-item { padding: 10px; background: white; margin: 5px 0; border-radius: 3px; border-left: 4px solid #4CAF50; }
+        .game-status { padding: 10px; background: #e3f2fd; border-radius: 4px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="head-style">Lullaby1</h1>
+        
+        <!-- Login/Register Form -->
+        <div id="auth-form">
+            <div class="form-group">
+                <label for="username">Username:</label>
+                <input type="text" id="username" placeholder="Choose a username" required>
+            </div>
+
+            <div class="form-group">
+                <label for="email">Email:</label>
+                <input type="email" id="email" placeholder="Enter your email" required>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password:</label>
+                <input type="password" id="password" placeholder="Enter password" required>
+            </div>
+
+            <button type="button" onclick="signUp()">Create Account & Play</button>
+        </div>
+
+        <!-- Game Area (hidden until logged in) -->
+        <div id="game-container" class="game-container">
+            <div class="game-status">
+                <p>Welcome, <strong id="current-player">Player</strong>!</p>
+                <button type="button" onclick="logout()" style="width: auto; padding: 8px 15px; background: #f44336;">Logout</button>
+            </div>
+
+            <div class="form-group">
+                <label for="game-level">Current Level:</label>
+                <input type="number" id="game-level" value="1" min="1" max="100">
+            </div>
+
+            <div class="form-group">
+                <label for="game-score">Score:</label>
+                <input type="number" id="game-score" value="0" min="0">
+            </div>
+
+            <button type="button" onclick="updateGameData()">Save Progress</button>
+
+            <div class="players-list">
+                <h3>Online Players</h3>
+                <div id="players-online"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js"></script>
+
+    <script src="scripts/firebase-config.js"></script>
+    <script src="scripts/game.js"></script>
+</body>
+</html>
