@@ -86,8 +86,7 @@ function buildInventoryRow(item, typeName, track, typeOptionsHtml, ownersOptions
     </td>
     <td>
       ${canEdit ? `<input type="date" data-field="date" value="${intDateToISO(track?.date)}" style="display:none">` : ''}
-      <div class="date-display">${formatDate(track?.date)}</div>
-      ${canEdit ? `<button class="edit-date-btn" data-id="${item.id}">Edit</button>` : ''}
+      ${canEdit ? `<button class="date-display-btn" data-id="${item.id}">${formatDate(track?.date)}</button>` : `<div class="date-display">${formatDate(track?.date)}</div>`}
     </td>
     <td>
       ${canEdit ? `<select data-field="owner">${ownersOptionsHtml}</select>` : `${track?.ownerName || '-'}`}
@@ -330,15 +329,21 @@ window.addEventListener('DOMContentLoaded', async () => {
       await saveRow(id, row);
       alert('Inventory row saved');
     }
-    if (event.target.matches('.edit-date-btn')) {
+    if (event.target.matches('.date-display-btn')) {
       const btn = event.target;
       const row = btn.closest('tr');
       const input = row.querySelector('input[data-field="date"]');
       if (!input) return;
-      // toggle visibility
+      // toggle visibility and focus
       const visible = input.style.display !== 'none';
       input.style.display = visible ? 'none' : '';
-      if (!visible) input.focus();
+      if (!visible) {
+        input.focus();
+        // when input value changes, update button label immediately for feedback
+        input.addEventListener('change', () => {
+          btn.textContent = formatDate(isoToIntDate(input.value) || input.value);
+        }, { once: false });
+      }
     }
   });
 
