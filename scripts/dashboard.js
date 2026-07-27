@@ -21,6 +21,15 @@ function clearStoredUser() {
 
 function formatDate(value) {
   if (!value) return '-';
+  // support Firestore tracking.date as int yyyymmdd or timestamp/string
+  if (typeof value === 'number' || (/^\d{8}$/.test(String(value)))) {
+    const s = String(value);
+    const y = parseInt(s.slice(0,4),10);
+    const m = parseInt(s.slice(4,6),10) - 1;
+    const d = parseInt(s.slice(6,8),10);
+    const dt = new Date(y, m, d);
+    return isNaN(dt.getTime()) ? String(value) : dt.toLocaleDateString();
+  }
   const date = new Date(value);
   return isNaN(date.getTime()) ? value : date.toLocaleDateString();
 }
@@ -29,11 +38,12 @@ function buildInventoryRow(item, typeName, track) {
   const canEdit = window.currentUser?.privilege === 2;
   const row = document.createElement('tr');
   row.dataset.id = item.id;
+  // show editable inputs for name/sn, typeID is editable (not typeName); show typeName as title
   row.innerHTML = `
     <td>${item.id}</td>
     <td><input class="cell-input" data-field="name" value="${item.name || ''}" ${canEdit ? '' : 'readonly'}></td>
     <td><input class="cell-input" data-field="sn" value="${item.sn || ''}" ${canEdit ? '' : 'readonly'}></td>
-    <td><input class="cell-input" data-field="type" value="${typeName}" ${canEdit ? '' : 'readonly'}></td>
+    <td><input class="cell-input" data-field="type" value="${item.typeID || ''}" title="${typeName}" ${canEdit ? '' : 'readonly'}></td>
     <td>${formatDate(track?.date)}</td>
     <td>${track?.ownerName || '-'}</td>
     <td>${canEdit ? '<button class="save-row-btn">Save</button>' : ''}</td>
@@ -42,7 +52,7 @@ function buildInventoryRow(item, typeName, track) {
 }
 
 async function loadInventory() {
-  const dataSnapshot = await getDocs(collection(db, 'data'));
+  const dataSnapshot = await getDocs(collection(db, 'assets'));
   const trackingSnapshot = await getDocs(collection(db, 'tracking'));
   const typeSnapshot = await getDocs(collection(db, 'type'));
 
@@ -53,11 +63,13 @@ async function loadInventory() {
   });
 
   const latestTrack = {};
+  // tracking documents keyed by assetsID; date is yyyymmdd int
   trackingSnapshot.forEach(docSnap => {
     const track = docSnap.data();
-    if (!track.dataId) return;
-    if (!latestTrack[track.dataId] || new Date(track.date) > new Date(latestTrack[track.dataId].date)) {
-      latestTrack[track.dataId] = track;
+    const key = docSnap.id || track.assetsID || track.dataId;
+    if (!key) return;
+    if (!latestTrack[key] || Number(track.date) > Number(latestTrack[key].date)) {
+      latestTrack[key] = track;
     }
   });
 
@@ -67,8 +79,9 @@ async function loadInventory() {
   dataSnapshot.forEach(docSnap => {
     const item = docSnap.data();
     item.id = docSnap.id;
+    // asset fields: detailID, name, sn, typeID
     const track = latestTrack[item.id];
-    const typeName = typeNames[item.type] || item.type || '-';
+    const typeName = typeNames[item.typeID] || item.typeID || '-';
     const row = buildInventoryRow(item, typeName, track);
     tableBody.appendChild(row);
   });
@@ -77,12 +90,13 @@ async function loadInventory() {
 async function saveRow(id, row) {
   const name = row.querySelector('input[data-field="name"]').value.trim();
   const sn = row.querySelector('input[data-field="sn"]').value.trim();
-  const type = row.querySelector('input[data-field="type"]').value.trim();
+  const typeID = row.querySelector('input[data-field="type"]').value.trim();
 
-  await updateDoc(doc(db, 'data', id), {
+  // update assets collection (typeID field is used for types)
+  await updateDoc(doc(db, 'assets', id), {
     name,
     sn,
-    type
+    typeID
   });
   await loadInventory();
 }
@@ -100,7 +114,7 @@ function setPrivilegeSections(privilege) {
 }
 
 async function loadUsers() {
-  const snapshot = await getDocs(collection(db, 'user'));
+  const snapshot = await getDocs(collection(db, 'users'));
   const container = document.getElementById('user-management-list');
   container.innerHTML = '';
 
@@ -114,8 +128,8 @@ async function loadUsers() {
       <div>Privilege:</div>
       <div>
         <select data-username="${username}" class="privilege-select">
-          <option value="1" ${Number(userData.previledge) === 1 ? 'selected' : ''}>Viewer</option>
-          <option value="2" ${Number(userData.previledge) === 2 ? 'selected' : ''}>Editor</option>
+          <option value="viewer" ${String(userData.previledge) === 'viewer' ? 'selected' : ''}>Viewer</option>
+          <option value="admin" ${String(userData.previledge) === 'admin' ? 'selected' : ''}>Admin</option>
         </select>
       </div>
       <button class="update-user-btn" data-username="${username}">Update</button>
@@ -144,7 +158,7 @@ async function loadTypes() {
 }
 
 async function loadOwners() {
-  const snapshot = await getDocs(collection(db, 'owner'));
+  const snapshot = await getDocs(collection(db, 'owners'));
   const container = document.getElementById('owner-management-list');
   container.innerHTML = '';
 
@@ -163,12 +177,14 @@ async function loadOwners() {
 
 async function addOwner(name) {
   const id = name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Date.now();
-  await setDoc(doc(db, 'owner', id), { name });
+  await setDoc(doc(db, 'owners', id), { name });
   await loadOwners();
 }
 
 async function updateUserPrivilege(username, privilege) {
-  await updateDoc(doc(db, 'user', username), { previledge: Number(privilege) });
+  // privilege is expected to be 'admin' or 'viewer'
+  const val = String(privilege) === 'admin' ? 'admin' : 'viewer';
+  await updateDoc(doc(db, 'users', username), { previledge: val });
   await loadUsers();
 }
 
@@ -243,7 +259,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('owner-management-list').addEventListener('click', async event => {
     if (event.target.matches('.delete-owner-btn')) {
       const id = event.target.dataset.id;
-      await deleteDoc(doc(db, 'owner', id));
+      await deleteDoc(doc(db, 'owners', id));
       await loadOwners();
       alert('Owner deleted');
     }

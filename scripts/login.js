@@ -17,7 +17,8 @@ async function login() {
   }
 
   try {
-    const userRef = doc(db, 'user', username);
+    // users collection per your schema
+    const userRef = doc(db, 'users', username);
     const userSnap = await getDoc(userRef);
     if (!userSnap.exists()) {
       loginError.textContent = 'Username không tồn tại.';
@@ -30,9 +31,12 @@ async function login() {
       return;
     }
 
+    // Map previledge string to numeric viewport used in UI (2 = admin/editor)
+    const privilege = (String(userData.previledge).toLowerCase() === 'admin') ? 2 : 1;
+
     localStorage.setItem('warehouseUser', JSON.stringify({
       username,
-      privilege: Number(userData.previledge) || 1
+      privilege
     }));
 
     window.location.href = 'html/main.html';
