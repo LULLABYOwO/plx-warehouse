@@ -85,7 +85,9 @@ function buildInventoryRow(item, typeName, track, typeOptionsHtml, ownersOptions
       ${canEdit ? `<select class="cell-input" data-field="type">${typeOptionsHtml}</select>` : `<span title="${typeName}">${typeName}</span>`}
     </td>
     <td>
-      ${canEdit ? `<input type="date" data-field="date" value="${intDateToISO(track?.date)}">` : `${formatDate(track?.date)}`}
+      ${canEdit ? `<input type="date" data-field="date" value="${intDateToISO(track?.date)}" style="display:none">` : ''}
+      <div class="date-display">${formatDate(track?.date)}</div>
+      ${canEdit ? `<button class="edit-date-btn" data-id="${item.id}">Edit</button>` : ''}
     </td>
     <td>
       ${canEdit ? `<select data-field="owner">${ownersOptionsHtml}</select>` : `${track?.ownerName || '-'}`}
@@ -327,6 +329,16 @@ window.addEventListener('DOMContentLoaded', async () => {
       const id = row.dataset.id;
       await saveRow(id, row);
       alert('Inventory row saved');
+    }
+    if (event.target.matches('.edit-date-btn')) {
+      const btn = event.target;
+      const row = btn.closest('tr');
+      const input = row.querySelector('input[data-field="date"]');
+      if (!input) return;
+      // toggle visibility
+      const visible = input.style.display !== 'none';
+      input.style.display = visible ? 'none' : '';
+      if (!visible) input.focus();
     }
   });
 
