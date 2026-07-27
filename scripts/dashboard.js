@@ -123,16 +123,17 @@ async function loadUsers() {
     const userData = docSnap.data();
     const row = document.createElement('div');
     row.className = 'user-row';
+    const isSelf = window.currentUser && window.currentUser.username === username;
     row.innerHTML = `
-      <div><strong>${username}</strong></div>
+      <div><strong>${username}${isSelf ? ' (you)' : ''}</strong></div>
       <div>Privilege:</div>
       <div>
-        <select data-username="${username}" class="privilege-select">
+        <select data-username="${username}" class="privilege-select" ${isSelf ? 'disabled' : ''}>
           <option value="viewer" ${String(userData.priviledge) === 'viewer' ? 'selected' : ''}>Viewer</option>
           <option value="admin" ${String(userData.priviledge) === 'admin' ? 'selected' : ''}>Admin</option>
         </select>
       </div>
-      <button class="update-user-btn" data-username="${username}">Update</button>
+      ${isSelf ? '<button class="update-user-btn" disabled>Update</button>' : `<button class="update-user-btn" data-username="${username}">Update</button>`}
     `;
     container.appendChild(row);
   });
@@ -182,6 +183,11 @@ async function addOwner(name) {
 }
 
 async function updateUserPrivilege(username, privilege) {
+  // Prevent admins from changing their own privilege here in the client
+  if (window.currentUser && window.currentUser.username === username) {
+    alert('Bạn không thể thay đổi quyền của chính mình.');
+    return;
+  }
   // privilege is expected to be 'admin' or 'viewer'
   const val = String(privilege) === 'admin' ? 'admin' : 'viewer';
   await updateDoc(doc(db, 'users', username), { priviledge: val });
