@@ -73,7 +73,7 @@ function isoToIntDate(iso) {
 }
 
 function buildInventoryRow(item, typeName, track, typeOptionsHtml, ownersOptionsHtml) {
-  const canEdit = window.currentUser?.privilege === 2;
+  const canEdit = canEditData(window.currentUser?.privilege);
   const row = document.createElement('tr');
   row.dataset.id = item.id;
   // show editable inputs for name/sn, typeID is editable (not typeName); show typeName as title
@@ -86,12 +86,12 @@ function buildInventoryRow(item, typeName, track, typeOptionsHtml, ownersOptions
     </td>
     <td>
       ${canEdit ? `<input type="date" data-field="date" value="${intDateToISO(track?.date)}" style="display:none">` : ''}
-      ${canEdit ? `<button class="date-display-btn" data-id="${item.id}" style="display:block;width:100%;height:100%;padding:6px 8px;border:1px solid #ddd;background:#fff;color:#000;font-weight:400;border-radius:0;box-sizing:border-box;text-align:left">${formatDate(track?.date)}</button>` : `<div class="date-display">${formatDate(track?.date)}</div>`}
+      ${canEdit ? `<button class="date-display-btn inline-btn" data-id="${item.id}">${formatDate(track?.date)}</button>` : `<div class="date-display">${formatDate(track?.date)}</div>`}
     </td>
     <td>
       ${canEdit ? `<select data-field="owner">${ownersOptionsHtml}</select>` : `${track?.ownerName || '-'}`}
     </td>
-    <td>${canEdit ? '<button class="save-row-btn">Save</button>' : ''}</td>
+    <td>${canEdit ? '<button class="save-row-btn green-btn">Save</button>' : ''}</td>
   `;
 
   // If editable select, set selected value to the asset's typeID
@@ -198,16 +198,62 @@ async function saveRow(id, row) {
   await loadInventory();
 }
 
+function normalizeRole(rawRole) {
+  const r = String(rawRole || '').trim().toLowerCase();
+  if (r === 'super admin' || r === 'super-admin' || r === 'superadmin' || r === 'super_admin') {
+    return 'super-admin';
+  }
+  if (r === 'admin') return 'admin';
+  if (r === 'editor') return 'editor';
+  return 'viewer';
+}
+
 function setPrivilegeSections(privilege) {
   const admin = document.getElementById('admin-panel');
   const viewOnly = document.getElementById('priv-view-only');
-  if (privilege === 2) {
+  if (privilege >= 3) {
     admin.classList.remove('hidden');
     viewOnly.classList.add('hidden');
   } else {
     admin.classList.add('hidden');
-    viewOnly.classList.remove('hidden');
+    if (privilege === 1) {
+      viewOnly.classList.remove('hidden');
+    } else {
+      viewOnly.classList.add('hidden');
+    }
   }
+}
+
+function roleToPrivilege(role) {
+  const r = String(role || '').trim().toLowerCase();
+  if (r === 'super-admin') return 4;
+  if (r === 'admin') return 3;
+  if (r === 'editor') return 2;
+  return 1;
+}
+
+function canEditData(privilege) {
+  return privilege >= 2;
+}
+
+function canManageUsers(currentRole, targetRole) {
+  const currentPrivilege = roleToPrivilege(currentRole);
+  const targetPrivilege = roleToPrivilege(targetRole);
+  if (currentPrivilege === 4) {
+    return true;
+  }
+  if (currentPrivilege === 3) {
+    return targetPrivilege <= 2;
+  }
+  return false;
+}
+
+function roleDisplay(role) {
+  const r = String(role || '').toLowerCase();
+  if (r === 'super-admin') return 'Super Admin';
+  if (r === 'admin') return 'Admin';
+  if (r === 'editor') return 'Editor';
+  return 'Viewer';
 }
 
 async function loadUsers() {
@@ -215,23 +261,46 @@ async function loadUsers() {
   const container = document.getElementById('user-management-list');
   container.innerHTML = '';
 
+  const currentRole = normalizeRole(window.currentUser?.role);
+
   snapshot.forEach(docSnap => {
     const username = docSnap.id;
     const userData = docSnap.data();
+    // use correctly-spelled `privilege` field from users docs
+    const targetRole = normalizeRole(userData.privilege);
     const row = document.createElement('div');
     row.className = 'user-row';
     const isSelf = window.currentUser && window.currentUser.username === username;
+    const canManage = canManageUsers(currentRole, targetRole) && !isSelf;
+    const targetDisplay = roleDisplay(targetRole);
+
+    let privilegeControl = `<span>${targetDisplay}</span>`;
+    let updateButton = isSelf ? '<button class="update-user-btn" disabled>Update</button>' : '';
+
+    if (canManage) {
+      privilegeControl = `
+        <select data-username="${username}" class="privilege-select">
+          <option value="viewer" ${targetRole === 'viewer' ? 'selected' : ''}>Viewer</option>
+          <option value="editor" ${targetRole === 'editor' ? 'selected' : ''}>Editor</option>
+          ${currentRole === 'super-admin' ? `<option value="admin" ${targetRole === 'admin' ? 'selected' : ''}>Admin</option>` : ''}
+          ${currentRole === 'super-admin' ? `<option value="super-admin" ${targetRole === 'super-admin' ? 'selected' : ''}>Super Admin</option>` : ''}
+        </select>
+      `;
+      updateButton = `<button class="update-user-btn green-btn" data-username="${username}">Update</button>`;
+    }
+
+    if (currentRole === 'super-admin' && isSelf) {
+      privilegeControl = `<span>${targetDisplay}</span>`;
+      updateButton = '<button class="update-user-btn" disabled>Update</button>';
+    }
+
     row.innerHTML = `
       <div><strong>${username}${isSelf ? ' (you)' : ''}</strong></div>
       <div>Privilege:</div>
-      <div>
-        <select data-username="${username}" class="privilege-select" ${isSelf ? 'disabled' : ''}>
-          <option value="viewer" ${String(userData.priviledge) === 'viewer' ? 'selected' : ''}>Viewer</option>
-          <option value="admin" ${String(userData.priviledge) === 'admin' ? 'selected' : ''}>Admin</option>
-        </select>
-      </div>
-      ${isSelf ? '<button class="update-user-btn" disabled>Update</button>' : `<button class="update-user-btn" data-username="${username}">Update</button>`}
+      <div>${privilegeControl}</div>
+      ${updateButton}
     `;
+
     container.appendChild(row);
   });
 }
@@ -249,7 +318,7 @@ async function loadTypes() {
       <div><strong>${docSnap.id}</strong> - ${typeData.name || ''}</div>
       <div>Value fields:</div>
       <div><input class="type-value-input" data-id="${docSnap.id}" value="${typeData.value || ''}" /></div>
-      <button class="save-type-btn" data-id="${docSnap.id}">Save</button>
+      <button class="save-type-btn green-btn" data-id="${docSnap.id}">Save</button>
     `;
     container.appendChild(row);
   });
@@ -267,7 +336,7 @@ async function loadOwners() {
     row.innerHTML = `
       <div><strong>${docSnap.id}</strong></div>
       <div>${owner.name || ''}</div>
-      <button class="delete-owner-btn" data-id="${docSnap.id}">Delete</button>
+      <button class="delete-owner-btn green-btn" data-id="${docSnap.id}">Delete</button>
     `;
     container.appendChild(row);
   });
@@ -280,14 +349,28 @@ async function addOwner(name) {
 }
 
 async function updateUserPrivilege(username, privilege) {
-  // Prevent admins from changing their own privilege here in the client
   if (window.currentUser && window.currentUser.username === username) {
     alert('Bạn không thể thay đổi quyền của chính mình.');
     return;
   }
-  // privilege is expected to be 'admin' or 'viewer'
-  const val = String(privilege) === 'admin' ? 'admin' : 'viewer';
-  await updateDoc(doc(db, 'users', username), { priviledge: val });
+
+  const currentRole = normalizeRole(window.currentUser.role);
+  const targetRole = normalizeRole(privilege);
+  const currentPrivilege = roleToPrivilege(currentRole);
+  const targetPrivilege = roleToPrivilege(targetRole);
+
+  if (currentPrivilege < 3) {
+    alert('Bạn không có quyền thay đổi quyền người dùng.');
+    return;
+  }
+
+  if (currentPrivilege === 3 && targetPrivilege >= 3) {
+    alert('Admin chỉ có thể thay đổi quyền của editor hoặc viewer.');
+    return;
+  }
+
+  const val = (targetRole === 'super-admin') ? 'super-admin' : (targetRole === 'admin' ? 'admin' : (targetRole === 'editor' ? 'editor' : 'viewer'));
+  await updateDoc(doc(db, 'users', username), { privilege: val });
   await loadUsers();
 }
 
@@ -306,9 +389,11 @@ window.addEventListener('DOMContentLoaded', async () => {
   window.currentUser = storedUser;
   document.getElementById('user-name').textContent = storedUser.username;
   // Determine admin status from stored numeric or role string
-  const isAdmin = (storedUser.privilege === 2) || (String(storedUser.role).toLowerCase() === 'admin');
-  document.getElementById('user-privilege').textContent = isAdmin ? 'Admin' : 'Viewer';
-  setPrivilegeSections(isAdmin ? 2 : 1);
+  const role = normalizeRole(storedUser.role);
+  const privilege = Number(storedUser.privilege) || roleToPrivilege(role);
+  document.getElementById('user-privilege').textContent = roleDisplay(role);
+  setPrivilegeSections(privilege);
+  const isAdmin = privilege >= 3;
 
   document.getElementById('logout-btn').addEventListener('click', () => {
     clearStoredUser();

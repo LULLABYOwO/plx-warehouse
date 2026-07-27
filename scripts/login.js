@@ -6,6 +6,23 @@ const passwordInput = document.getElementById('password');
 const loginError = document.getElementById('login-error');
 const loginBtn = document.getElementById('login-btn');
 
+function normalizeRole(rawRole) {
+  const r = String(rawRole || '').trim().toLowerCase();
+  if (r === 'super admin' || r === 'super-admin' || r === 'superadmin' || r === 'super_admin') {
+    return 'super-admin';
+  }
+  if (r === 'admin') return 'admin';
+  if (r === 'editor') return 'editor';
+  return 'viewer';
+}
+
+function roleToPrivilege(role) {
+  if (role === 'super-admin') return 4;
+  if (role === 'admin') return 3;
+  if (role === 'editor') return 2;
+  return 1;
+}
+
 async function login() {
   loginError.textContent = '';
   const username = usernameInput.value.trim();
@@ -31,12 +48,11 @@ async function login() {
       return;
     }
 
-    // Read privilege field robustly (accept several common misspellings)
-    const rawRole = String(userData.priviledge || userData.previledge || userData.privilege || '').trim().toLowerCase();
-    const role = rawRole;
-    const privilege = (role === 'admin') ? 2 : 1;
+    // read correctly-named field `privilege` from users doc
+    const rawRole = String(userData.privilege || '').trim().toLowerCase();
+    const role = normalizeRole(rawRole);
+    const privilege = roleToPrivilege(role);
 
-    // Store both numeric and string role for compatibility
     localStorage.setItem('warehouseUser', JSON.stringify({
       username,
       privilege,
