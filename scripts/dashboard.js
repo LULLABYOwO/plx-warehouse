@@ -62,7 +62,7 @@ function buildInventoryRow(item, typeName, track, typeOptionsHtml) {
 async function loadInventory() {
   const dataSnapshot = await getDocs(collection(db, 'assets'));
   const trackingSnapshot = await getDocs(collection(db, 'tracking'));
-  const typeSnapshot = await getDocs(collection(db, 'type'));
+  const typeSnapshot = await getDocs(collection(db, 'types'));
 
   const typeNames = {};
   typeSnapshot.forEach(docSnap => {
@@ -156,7 +156,7 @@ async function loadUsers() {
 }
 
 async function loadTypes() {
-  const snapshot = await getDocs(collection(db, 'type'));
+  const snapshot = await getDocs(collection(db, 'types'));
   const container = document.getElementById('type-management-list');
   container.innerHTML = '';
 
@@ -211,7 +211,7 @@ async function updateUserPrivilege(username, privilege) {
 }
 
 async function saveType(id, value) {
-  await updateDoc(doc(db, 'type', id), { value });
+  await updateDoc(doc(db, 'types', id), { value });
   await loadTypes();
 }
 
