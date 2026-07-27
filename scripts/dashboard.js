@@ -24,17 +24,37 @@ function formatDate(value) {
   // support Firestore tracking.date as int yyyymmdd or timestamp/string
   if (typeof value === 'number' || (/^\d{8}$/.test(String(value)))) {
     const s = String(value);
-    const y = parseInt(s.slice(0,4),10);
-    const m = parseInt(s.slice(4,6),10) - 1;
-    const d = parseInt(s.slice(6,8),10);
-    const dt = new Date(y, m, d);
-    return isNaN(dt.getTime()) ? String(value) : dt.toLocaleDateString();
+    const y = s.slice(0,4);
+    const m = s.slice(4,6);
+    const d = s.slice(6,8);
+    return `${d}/${m}/${y}`;
   }
   const date = new Date(value);
-  return isNaN(date.getTime()) ? value : date.toLocaleDateString();
+  if (isNaN(date.getTime())) return value;
+  const dd = ('0' + date.getDate()).slice(-2);
+  const mm = ('0' + (date.getMonth() + 1)).slice(-2);
+  const yyyy = date.getFullYear();
+  return `${dd}/${mm}/${yyyy}`;
 }
 
-function buildInventoryRow(item, typeName, track, typeOptionsHtml) {
+function intDateToISO(intDate) {
+  if (!intDate) return '';
+  const s = String(intDate);
+  if (!/^\d{8}$/.test(s)) return '';
+  return `${s.slice(0,4)}-${s.slice(4,6)}-${s.slice(6,8)}`;
+}
+
+function isoToIntDate(iso) {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return null;
+  const y = d.getFullYear();
+  const m = ('0' + (d.getMonth() + 1)).slice(-2);
+  const day = ('0' + d.getDate()).slice(-2);
+  return Number(`${y}${m}${day}`);
+}
+
+function buildInventoryRow(item, typeName, track, typeOptionsHtml, ownersOptionsHtml) {
   const canEdit = window.currentUser?.privilege === 2;
   const row = document.createElement('tr');
   row.dataset.id = item.id;
@@ -46,8 +66,12 @@ function buildInventoryRow(item, typeName, track, typeOptionsHtml) {
     <td>
       ${canEdit ? `<select class="cell-input" data-field="type">${typeOptionsHtml}</select>` : `<span title="${typeName}">${typeName}</span>`}
     </td>
-    <td>${formatDate(track?.date)}</td>
-    <td>${track?.ownerName || '-'}</td>
+    <td>
+      ${canEdit ? `<input type="date" data-field="date" value="${intDateToISO(track?.date)}">` : `${formatDate(track?.date)}`}
+    </td>
+    <td>
+      ${canEdit ? `<select data-field="owner">${ownersOptionsHtml}</select>` : `${track?.ownerName || '-'}`}
+    </td>
     <td>${canEdit ? '<button class="save-row-btn">Save</button>' : ''}</td>
   `;
 
@@ -55,7 +79,20 @@ function buildInventoryRow(item, typeName, track, typeOptionsHtml) {
   if (canEdit) {
     const sel = row.querySelector('select[data-field="type"]');
     if (sel && item.typeID) sel.value = item.typeID;
+    const ownerSel = row.querySelector('select[data-field="owner"]');
+    if (ownerSel) {
+      // try to select by owner ID if tracking stored ownerID, otherwise match by ownerName
+      if (track?.ownerID) {
+        ownerSel.value = track.ownerID;
+      } else if (track?.ownerName) {
+        const opt = Array.from(ownerSel.options).find(o => o.text === track.ownerName);
+        if (opt) ownerSel.value = opt.value;
+      }
+    }
   }
+  // expose previous track info for save logic
+  row.dataset.trackDate = track?.date || '';
+  row.dataset.trackOwner = track?.ownerName || '';
   return row;
 }
 
@@ -63,6 +100,7 @@ async function loadInventory() {
   const dataSnapshot = await getDocs(collection(db, 'assets'));
   const trackingSnapshot = await getDocs(collection(db, 'tracking'));
   const typeSnapshot = await getDocs(collection(db, 'types'));
+  const ownersSnapshot = await getDocs(collection(db, 'owners'));
 
   const typeNames = {};
   typeSnapshot.forEach(docSnap => {
@@ -75,6 +113,12 @@ async function loadInventory() {
     const value = docSnap.data();
     const name = value.name || docSnap.id;
     typeOptionsHtml += `<option value="${docSnap.id}">${name}</option>`;
+  });
+  let ownersOptionsHtml = '';
+  ownersSnapshot.forEach(docSnap => {
+    const o = docSnap.data();
+    const name = o.name || docSnap.id;
+    ownersOptionsHtml += `<option value="${docSnap.id}">${name}</option>`;
   });
 
   const latestTrack = {};
@@ -97,7 +141,7 @@ async function loadInventory() {
     // asset fields: detailID, name, sn, typeID
     const track = latestTrack[item.id];
     const typeName = typeNames[item.typeID] || item.typeID || '-';
-    const row = buildInventoryRow(item, typeName, track, typeOptionsHtml);
+    const row = buildInventoryRow(item, typeName, track, typeOptionsHtml, ownersOptionsHtml);
     tableBody.appendChild(row);
   });
 }
@@ -114,6 +158,24 @@ async function saveRow(id, row) {
     sn,
     typeID
   });
+  // update tracking: date and owner if present
+  const dateInput = row.querySelector('input[data-field="date"]');
+  const ownerSelect = row.querySelector('select[data-field="owner"]');
+  let trackUpdate = {};
+  if (dateInput) {
+    const intDate = isoToIntDate(dateInput.value);
+    if (intDate) trackUpdate.date = intDate;
+  }
+  if (ownerSelect) {
+    const ownerId = ownerSelect.value;
+    const ownerName = ownerSelect.selectedOptions[0]?.text || '';
+    trackUpdate.ownerName = ownerName;
+    trackUpdate.ownerID = ownerId;
+  }
+  if (Object.keys(trackUpdate).length > 0) {
+    trackUpdate.assetsID = id;
+    await setDoc(doc(db, 'tracking', id), trackUpdate, { merge: true });
+  }
   await loadInventory();
 }
 
