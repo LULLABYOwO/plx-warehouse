@@ -21,7 +21,11 @@ function clearStoredUser() {
 
 function formatDate(value) {
   if (!value) return '-';
-  // support Firestore tracking.date as int yyyymmdd or timestamp/string
+  // support Firestore tracking.date as int yyyymmdd or Timestamp/Date/string
+  // Firestore Timestamp objects have a toDate() method
+  if (value && typeof value.toDate === 'function') {
+    value = value.toDate();
+  }
   if (typeof value === 'number' || (/^\d{8}$/.test(String(value)))) {
     const s = String(value);
     const y = s.slice(0,4);
@@ -29,7 +33,7 @@ function formatDate(value) {
     const d = s.slice(6,8);
     return `${d}/${m}/${y}`;
   }
-  const date = new Date(value);
+  const date = value instanceof Date ? value : new Date(value);
   if (isNaN(date.getTime())) return value;
   const dd = ('0' + date.getDate()).slice(-2);
   const mm = ('0' + (date.getMonth() + 1)).slice(-2);
@@ -39,6 +43,20 @@ function formatDate(value) {
 
 function intDateToISO(intDate) {
   if (!intDate) return '';
+  // accept Firestore Timestamp or Date or int yyyymmdd
+  if (intDate && typeof intDate.toDate === 'function') {
+    const d = intDate.toDate();
+    const yyyy = d.getFullYear();
+    const mm = ('0' + (d.getMonth() + 1)).slice(-2);
+    const dd = ('0' + d.getDate()).slice(-2);
+    return `${yyyy}-${mm}-${dd}`;
+  }
+  if (intDate instanceof Date) {
+    const yyyy = intDate.getFullYear();
+    const mm = ('0' + (intDate.getMonth() + 1)).slice(-2);
+    const dd = ('0' + intDate.getDate()).slice(-2);
+    return `${yyyy}-${mm}-${dd}`;
+  }
   const s = String(intDate);
   if (!/^\d{8}$/.test(s)) return '';
   return `${s.slice(0,4)}-${s.slice(4,6)}-${s.slice(6,8)}`;
