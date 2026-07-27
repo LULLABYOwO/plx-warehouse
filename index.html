@@ -1,37 +1,30 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PLX Warehouse</title>
-    <link rel="icon" type="image/png" sizes="256x256" href="assets/icons/Cat 256x256.ico">
-    <link rel="stylesheet" href="assets/fonts.css">
-    <link rel="stylesheet" href="assets/main.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PLX Warehouse Login</title>
+  <link rel="icon" type="image/png" sizes="256x256" href="assets/icons/Cat 256x256.ico">
+  <link rel="stylesheet" href="assets/fonts.css">
+  <link rel="stylesheet" href="assets/main.css">
 </head>
 <body>
-    <div class="container">
-        <h1 class="head-style">Warehouse Manager</h1>
-        
-        <!-- Login/Register Form -->
-        <div id="auth-form">
-            <div class="form-group">
-                <label for="username">Username:</label>
-                <input type="text" id="username" placeholder="Choose a username" required>
-            </div>
-
-            <div class="form-group">
-                <label for="email">Email:</label>
-                <input type="email" id="email" placeholder="Enter your email" required>
-            </div>
-
-            <div class="form-group">
-                <label for="password">Password:</label>
-                <input type="password" id="password" placeholder="Enter password" required>
-            </div>
-
-            <button type="button">Signin</button>
-        </div>
+  <div class="container">
+    <div class="auth-card">
+      <h1>Warehouse Login</h1>
+      <div class="form-group">
+        <label for="username">Username</label>
+        <input type="text" id="username" placeholder="Enter your username" autocomplete="username" />
+      </div>
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" placeholder="Enter your password" autocomplete="current-password" />
+      </div>
+      <button id="login-btn" class="primary-btn">Login</button>
+      <p id="login-error" class="error-text"></p>
     </div>
-    <source src="scripts/firebase.js" type="module"></source>
+  </div>
+
+  <script type="module" src="scripts/login.js"></script>
 </body>
 </html>
