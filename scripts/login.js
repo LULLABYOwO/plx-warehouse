@@ -31,12 +31,16 @@ async function login() {
       return;
     }
 
-    // Map priviledge string to numeric viewport used in UI (2 = admin/editor)
-    const privilege = (String(userData.priviledge).toLowerCase() === 'admin') ? 2 : 1;
+    // Read privilege field robustly (accept several common misspellings)
+    const rawRole = String(userData.priviledge || userData.previledge || userData.privilege || '').trim().toLowerCase();
+    const role = rawRole;
+    const privilege = (role === 'admin') ? 2 : 1;
 
+    // Store both numeric and string role for compatibility
     localStorage.setItem('warehouseUser', JSON.stringify({
       username,
-      privilege
+      privilege,
+      role
     }));
 
     window.location.href = 'html/main.html';

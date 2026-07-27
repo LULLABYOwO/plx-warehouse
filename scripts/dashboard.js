@@ -202,8 +202,10 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   window.currentUser = storedUser;
   document.getElementById('user-name').textContent = storedUser.username;
-  document.getElementById('user-privilege').textContent = storedUser.privilege === 2 ? 'Editor' : 'Viewer';
-  setPrivilegeSections(storedUser.privilege);
+  // Determine admin status from stored numeric or role string
+  const isAdmin = (storedUser.privilege === 2) || (String(storedUser.role).toLowerCase() === 'admin');
+  document.getElementById('user-privilege').textContent = isAdmin ? 'Admin' : 'Viewer';
+  setPrivilegeSections(isAdmin ? 2 : 1);
 
   document.getElementById('logout-btn').addEventListener('click', () => {
     clearStoredUser();
@@ -211,7 +213,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   });
 
   await loadInventory();
-  if (storedUser.privilege === 2) {
+  if (isAdmin) {
     await loadUsers();
     await loadTypes();
     await loadOwners();
