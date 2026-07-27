@@ -31,8 +31,8 @@ async function login() {
       return;
     }
 
-    // Map previledge string to numeric viewport used in UI (2 = admin/editor)
-    const privilege = (String(userData.previledge).toLowerCase() === 'admin') ? 2 : 1;
+    // Map priviledge string to numeric viewport used in UI (2 = admin/editor)
+    const privilege = (String(userData.priviledge).toLowerCase() === 'admin') ? 2 : 1;
 
     localStorage.setItem('warehouseUser', JSON.stringify({
       username,
