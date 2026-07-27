@@ -86,7 +86,7 @@ function buildInventoryRow(item, typeName, track, typeOptionsHtml, ownersOptions
     </td>
     <td>
       ${canEdit ? `<input type="date" data-field="date" value="${intDateToISO(track?.date)}" style="display:none">` : ''}
-      ${canEdit ? `<button class="date-display-btn" data-id="${item.id}">${formatDate(track?.date)}</button>` : `<div class="date-display">${formatDate(track?.date)}</div>`}
+      ${canEdit ? `<button class="date-display-btn" data-id="${item.id}" style="display:inline-block;width:100%;height:100%;padding:6px 8px;border:0;background:transparent;text-align:left">${formatDate(track?.date)}</button>` : `<div class="date-display">${formatDate(track?.date)}</div>`}
     </td>
     <td>
       ${canEdit ? `<select data-field="owner">${ownersOptionsHtml}</select>` : `${track?.ownerName || '-'}`}
