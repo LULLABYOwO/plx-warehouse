@@ -34,7 +34,7 @@ function formatDate(value) {
   return isNaN(date.getTime()) ? value : date.toLocaleDateString();
 }
 
-function buildInventoryRow(item, typeName, track) {
+function buildInventoryRow(item, typeName, track, typeOptionsHtml) {
   const canEdit = window.currentUser?.privilege === 2;
   const row = document.createElement('tr');
   row.dataset.id = item.id;
@@ -43,11 +43,19 @@ function buildInventoryRow(item, typeName, track) {
     <td>${item.id}</td>
     <td><input class="cell-input" data-field="name" value="${item.name || ''}" ${canEdit ? '' : 'readonly'}></td>
     <td><input class="cell-input" data-field="sn" value="${item.sn || ''}" ${canEdit ? '' : 'readonly'}></td>
-    <td><input class="cell-input" data-field="type" value="${item.typeID || ''}" title="${typeName}" ${canEdit ? '' : 'readonly'}></td>
+    <td>
+      ${canEdit ? `<select class="cell-input" data-field="type">${typeOptionsHtml}</select>` : `<span title="${typeName}">${typeName}</span>`}
+    </td>
     <td>${formatDate(track?.date)}</td>
     <td>${track?.ownerName || '-'}</td>
     <td>${canEdit ? '<button class="save-row-btn">Save</button>' : ''}</td>
   `;
+
+  // If editable select, set selected value to the asset's typeID
+  if (canEdit) {
+    const sel = row.querySelector('select[data-field="type"]');
+    if (sel && item.typeID) sel.value = item.typeID;
+  }
   return row;
 }
 
@@ -60,6 +68,13 @@ async function loadInventory() {
   typeSnapshot.forEach(docSnap => {
     const value = docSnap.data();
     typeNames[docSnap.id] = value.name || docSnap.id;
+  });
+  // build options html for admin selects
+  let typeOptionsHtml = '';
+  typeSnapshot.forEach(docSnap => {
+    const value = docSnap.data();
+    const name = value.name || docSnap.id;
+    typeOptionsHtml += `<option value="${docSnap.id}">${name}</option>`;
   });
 
   const latestTrack = {};
@@ -82,15 +97,16 @@ async function loadInventory() {
     // asset fields: detailID, name, sn, typeID
     const track = latestTrack[item.id];
     const typeName = typeNames[item.typeID] || item.typeID || '-';
-    const row = buildInventoryRow(item, typeName, track);
+    const row = buildInventoryRow(item, typeName, track, typeOptionsHtml);
     tableBody.appendChild(row);
   });
 }
-
 async function saveRow(id, row) {
   const name = row.querySelector('input[data-field="name"]').value.trim();
   const sn = row.querySelector('input[data-field="sn"]').value.trim();
-  const typeID = row.querySelector('input[data-field="type"]').value.trim();
+  // support select for type when admin; fall back to input if present
+  const typeSelect = row.querySelector('select[data-field="type"]');
+  const typeID = typeSelect ? (typeSelect.value || '').trim() : (row.querySelector('input[data-field="type"]')?.value.trim() || '');
 
   // update assets collection (typeID field is used for types)
   await updateDoc(doc(db, 'assets', id), {
