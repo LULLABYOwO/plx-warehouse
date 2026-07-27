@@ -128,8 +128,8 @@ async function loadUsers() {
       <div>Privilege:</div>
       <div>
         <select data-username="${username}" class="privilege-select">
-          <option value="viewer" ${String(userData.previledge) === 'viewer' ? 'selected' : ''}>Viewer</option>
-          <option value="admin" ${String(userData.previledge) === 'admin' ? 'selected' : ''}>Admin</option>
+          <option value="viewer" ${String(userData.priviledge) === 'viewer' ? 'selected' : ''}>Viewer</option>
+          <option value="admin" ${String(userData.priviledge) === 'admin' ? 'selected' : ''}>Admin</option>
         </select>
       </div>
       <button class="update-user-btn" data-username="${username}">Update</button>
@@ -184,7 +184,7 @@ async function addOwner(name) {
 async function updateUserPrivilege(username, privilege) {
   // privilege is expected to be 'admin' or 'viewer'
   const val = String(privilege) === 'admin' ? 'admin' : 'viewer';
-  await updateDoc(doc(db, 'users', username), { previledge: val });
+  await updateDoc(doc(db, 'users', username), { priviledge: val });
   await loadUsers();
 }
 
