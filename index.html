@@ -25,6 +25,14 @@
     </div>
   </div>
 
+  <script>
+    // Clear entire localStorage each time index.html is opened
+    try {
+      localStorage.clear();
+    } catch (e) {
+      console.warn('localStorage.clear() failed', e);
+    }
+  </script>
   <script type="module" src="scripts/login.js"></script>
 </body>
 </html>
