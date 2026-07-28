@@ -17,50 +17,75 @@
       <button id="logout-btn" class="primary-btn green-btn">Logout</button>
     </header>
 
-    <section class="section-card">
-      <h2>Inventory</h2>
+    <div class="content-container">
+      <section class="section-card">
+        <h2>Inventory</h2>
+      <div class="inventory-controls">
+        <div class="search-group">
+          <div class="search-field">
+            <input id="inventory-search" type="text" placeholder="Search inventory..." />
+            <div class="search-type-select">
+              <button id="search-type-toggle" class="dropdown-btn">Tên ▾</button>
+              <div id="search-type-menu" class="dropdown-menu hidden">
+                <button type="button" class="dropdown-item" data-field="name">Tên</button>
+                <button type="button" class="dropdown-item" data-field="id">Số thẻ</button>
+                <button type="button" class="dropdown-item" data-field="sn">Số seri</button>
+              </div>
+            </div>
+          </div>
+          <button id="search-btn" class="secondary-btn">Search</button>
+          <div class="filter-type-dropdown">
+            <button id="filter-type-toggle" class="dropdown-btn">All ▾</button>
+            <div id="filter-type-menu" class="dropdown-menu hidden"></div>
+          </div>
+        </div>
+      </div>
       <div class="table-wrapper">
         <table id="inventory-table">
           <thead>
             <tr>
-              <th>Số thẻ</th>
-              <th>Tên</th>
-              <th>Số seri</th>
-              <th>Loại</th>
-              <th>Ngày sử dụng</th>
-              <th>Bên sử dụng</th>
-              <th></th>
+              <th class="col-s0"><input id="select-all" type="checkbox" aria-label="Select all assets" /></th>
+              <th class="col-s1">Số thẻ</th>
+              <th class="col-s2">Tên</th>
+              <th class="col-s3">Số seri</th>
+              <th class="col-s4">Loại</th>
+              <th class="col-s5">Ngày sử dụng</th>
+              <th class="col-s6">Bên sử dụng</th>
+              <th class="col-s7 actions-header"><button id="bulk-save-btn" class="primary-btn green-btn">Save</button></th>
             </tr>
           </thead>
           <tbody></tbody>
         </table>
       </div>
+      <div class="table-actions hidden">
+        <button id="bulk-save-btn" class="primary-btn green-btn">Save selected</button>
+      </div>
     </section>
-
-    <section id="priv-view-only" class="section-card hidden">
-      <h2>Chế độ xem</h2>
-      <p>Bạn chỉ có quyền xem dữ liệu. Nếu muốn chỉnh sửa, cần tài khoản có quyền Editor.</p>
-    </section>
-
-    <div id="admin-panel" class="hidden">
-      <section class="section-card">
-        <h2>Quản lý người dùng</h2>
-        <div id="user-management-list" class="list-grid"></div>
+      <section id="priv-view-only" class="section-card hidden">
+        <h2>Chế độ xem</h2>
+        <p>Bạn chỉ có quyền xem dữ liệu. Nếu muốn chỉnh sửa, cần tài khoản có quyền Editor.</p>
       </section>
 
-      <section class="section-card">
-        <h2>Quản lý loại tài sản</h2>
-        <div id="type-management-list" class="list-grid"></div>
-      </section>
+      <div id="admin-panel" class="hidden">
+        <section class="section-card">
+          <h2>Quản lý người dùng</h2>
+          <div id="user-management-list" class="list-grid"></div>
+        </section>
 
-      <section class="section-card">
-        <h2>Quản lý chủ sở hữu</h2>
-        <div class="owner-add-form">
-          <input id="new-owner-name" type="text" placeholder="New owner name" />
-          <button id="owner-add-btn" class="secondary-btn green-btn">Add Owner</button>
-        </div>
-        <div id="owner-management-list" class="list-grid"></div>
-      </section>
+        <section class="section-card">
+          <h2>Quản lý loại tài sản</h2>
+          <div id="type-management-list" class="list-grid"></div>
+        </section>
+
+        <section class="section-card">
+          <h2>Quản lý chủ sở hữu</h2>
+          <div class="owner-add-form">
+            <input id="new-owner-name" type="text" placeholder="New owner name" />
+            <button id="owner-add-btn" class="secondary-btn green-btn">Add Owner</button>
+          </div>
+          <div id="owner-management-list" class="list-grid"></div>
+        </section>
+      </div>
     </div>
   </div>
 

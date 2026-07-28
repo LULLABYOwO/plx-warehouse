@@ -8,18 +8,20 @@ const loginBtn = document.getElementById('login-btn');
 
 function normalizeRole(rawRole) {
   const r = String(rawRole || '').trim().toLowerCase();
-  if (r === 'super admin' || r === 'super-admin' || r === 'superadmin' || r === 'super_admin') {
+  if (r === '4' || r === 'super admin' || r === 'super-admin' || r === 'superadmin' || r === 'super_admin') {
     return 'super-admin';
   }
-  if (r === 'admin') return 'admin';
-  if (r === 'editor') return 'editor';
+  if (r === '3' || r === 'admin') return 'admin';
+  if (r === '2' || r === 'editor') return 'editor';
   return 'viewer';
 }
 
 function roleToPrivilege(role) {
-  if (role === 'super-admin') return 4;
-  if (role === 'admin') return 3;
-  if (role === 'editor') return 2;
+  if (typeof role === 'number') return role;
+  const r = String(role || '').trim().toLowerCase();
+  if (r === 'super-admin') return 4;
+  if (r === 'admin') return 3;
+  if (r === 'editor') return 2;
   return 1;
 }
 

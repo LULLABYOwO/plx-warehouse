@@ -9,9 +9,8 @@ html {
 }
 
 body {
-    font-family: Consolas, sans-serif;
+    font-family: Courier, sans-serif;
     background-color: #f4f4f4;
-    padding: 20px;
 }
 
 .spc-v {
@@ -24,13 +23,25 @@ body {
     height: 100%;
 }
 
-.container {
+.content-container {
+    padding-left: 3%;
+    padding-right: 3%;
+}
+
+.login-container {
     max-width: 30%;
     margin: 0 auto;
     background-color: white;
     padding: 3%;
     border-radius: 3%;
     box-shadow: 0 0.125rem 0.625rem rgba(0, 0, 0, 0.1);
+}
+
+.dashboard-header {
+    position: relative;
+    top: 0;
+    width: 100%;
+    background-color: cyan;
 }
 
 .head-style {
@@ -58,11 +69,11 @@ input[type="email"],
 input[type="password"],
 textarea {
     width: 100%;
-    padding: 10px;
+    padding: 0.1rem 0.25rem;
     border: 1px solid #ddd;
     border-radius: 4px;
-    font-size: 14px;
-    font-family: Arial, sans-serif;
+    font-size: 1.5rem;
+    font-family: Courier, sans-serif;
 }
 
 input[type="text"]:focus,
@@ -81,6 +92,7 @@ textarea {
 
 button {
     cursor: pointer;
+    font-family: cursive, 'Courier New', Courier, monospace;
 }
 
 button:hover {
@@ -94,7 +106,7 @@ button.green-btn {
     border-radius: 4px;
     padding: 0.25rem;
     font-size: 1rem;
-    font-weight: bold;
+    font-weight: medium;
     cursor: pointer;
     transition: background-color 0.3s;
 }
@@ -115,4 +127,143 @@ button.inline-btn {
     background-color: white;
     border: 1px solid #767676;
     border-radius: 2px;
+}
+
+.inventory-controls {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+}
+
+.search-group {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.search-field {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    flex-wrap: nowrap;
+}
+
+.search-field input[type="text"] {
+    min-width: 220px;
+}
+
+.search-type-select {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.search-type-select button {
+    white-space: nowrap;
+}
+
+.dropdown-btn {
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 0.5rem 0.75rem;
+}
+
+.hidden {
+    display: none !important;
+}
+
+.dropdown-menu {
+    position: absolute;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+    z-index: 10;
+    margin-top: 0.25rem;
+    width: max-content;
+    max-height: 280px;
+    overflow-y: auto;
+}
+
+.dropdown-item {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border: none;
+    background: transparent;
+    text-align: left;
+}
+
+.dropdown-item:hover {
+    background: #f0f0f0;
+}
+
+.filter-type-dropdown,
+.search-type-select {
+    position: relative;
+}
+
+.table-actions {
+    margin-top: 1rem;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.actions-header {
+    text-align: right;
+}
+
+.actions-header .primary-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+}
+
+.asset-id-input {
+    min-width: 120px;
+}
+
+.cell-input {
+    width: 100%;
+    border: 1px solid #ddd;
+    border-radius: 2px;
+    font-size: 1.5rem;
+    font-family: Courier, sans-serif;
+}
+
+.col-s0 {
+    width: 1%;
+    text-align: left;
+}
+
+.col-s1 {
+    width: 14%;
+}
+
+.col-s2 {
+    width: 37%;
+}
+
+.col-s3 {
+    width: 20%;
+}
+
+.col-s4 {
+    width: 13%;
+}
+
+.col-s5 {
+    width: 7%;
+}
+
+.col-s6 {
+    width: 6%;
+}
+
+.col-s7 {
+    width: 0%;
 }

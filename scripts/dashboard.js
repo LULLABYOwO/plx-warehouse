@@ -74,11 +74,14 @@ function isoToIntDate(iso) {
 
 function buildInventoryRow(item, typeName, track, typeOptionsHtml, ownersOptionsHtml) {
   const canEdit = canEditData(window.currentUser?.privilege);
+  const canEditId = window.currentUser?.privilege >= 3;
+  const selected = window.selectedAssets && window.selectedAssets.has(item.id);
   const row = document.createElement('tr');
-  row.dataset.id = item.id;
+  row.dataset.originalId = item.id;
   // show editable inputs for name/sn, typeID is editable (not typeName); show typeName as title
   row.innerHTML = `
-    <td>${item.id}</td>
+    <td>${canEdit ? `<input type="checkbox" class="row-select" data-id="${item.id}" ${selected ? 'checked' : ''}>` : ''}</td>
+    <td>${canEditId ? `<input class="cell-input asset-id-input" data-field="id" value="${item.id}">` : `<span>${item.id}</span>`}</td>
     <td><input class="cell-input" data-field="name" value="${item.name || ''}" ${canEdit ? '' : 'readonly'}></td>
     <td><input class="cell-input" data-field="sn" value="${item.sn || ''}" ${canEdit ? '' : 'readonly'}></td>
     <td>
@@ -89,9 +92,8 @@ function buildInventoryRow(item, typeName, track, typeOptionsHtml, ownersOptions
       ${canEdit ? `<button class="date-display-btn inline-btn" data-id="${item.id}">${formatDate(track?.date)}</button>` : `<div class="date-display">${formatDate(track?.date)}</div>`}
     </td>
     <td>
-      ${canEdit ? `<select data-field="owner">${ownersOptionsHtml}</select>` : `${track?.ownerName || '-'}`}
+      ${canEdit ? `<select class="cell-input" data-field="owner">${ownersOptionsHtml}</select>` : `${track?.ownerName || '-'}`}
     </td>
-    <td>${canEdit ? '<button class="save-row-btn green-btn">Save</button>' : ''}</td>
   `;
 
   // If editable select, set selected value to the asset's typeID
@@ -154,30 +156,164 @@ async function loadInventory() {
   const tableBody = document.querySelector('#inventory-table tbody');
   tableBody.innerHTML = '';
 
+  const inventoryItems = [];
   dataSnapshot.forEach(docSnap => {
     const item = docSnap.data();
     item.id = docSnap.id;
-    // asset fields: detailID, name, sn, typeID
     const track = latestTrack[item.id];
-    const typeName = typeNames[item.typeID] || item.typeID || '-';
-    const row = buildInventoryRow(item, typeName, track, typeOptionsHtml, ownersOptionsHtml);
+    inventoryItems.push({
+      ...item,
+      typeName: typeNames[item.typeID] || item.typeID || '-',
+      track: track || {}
+    });
+  });
+
+  window.inventoryData = inventoryItems;
+  window.typeNames = typeNames;
+  window.inventoryTypeOptionsHtml = typeOptionsHtml;
+  window.ownersOptionsHtml = ownersOptionsHtml;
+  window.availableTypes = typeSnapshot.docs.map(docSnap => docSnap.data().name || docSnap.id).sort((a,b) => a.localeCompare(b));
+  window.selectedAssets = new Set();
+  window.searchField = window.searchField || 'name';
+  window.typeFilter = window.typeFilter || 'All';
+
+  buildTypeFilterMenu(window.availableTypes);
+  renderInventoryRows(window.inventoryData);
+}
+
+function renderInventoryRows(items) {
+  const tableBody = document.querySelector('#inventory-table tbody');
+  tableBody.innerHTML = '';
+  items.forEach(item => {
+    const row = buildInventoryRow(item, item.typeName, item.track, window.inventoryTypeOptionsHtml, window.ownersOptionsHtml);
     tableBody.appendChild(row);
   });
+  updateSelectAllState();
 }
-async function saveRow(id, row) {
+
+function applyInventoryFilters() {
+  const searchQuery = document.getElementById('inventory-search').value.trim().toLowerCase();
+  const searchField = window.searchField || 'name';
+  const typeFilter = window.typeFilter || 'All';
+
+  const filtered = (window.inventoryData || []).filter(item => {
+    let text = '';
+    if (searchField === 'name') text = item.name || '';
+    else if (searchField === 'id') text = item.id || '';
+    else if (searchField === 'sn') text = item.sn || '';
+    const matchesSearch = String(text).toLowerCase().includes(searchQuery);
+    const matchesType = typeFilter === 'All' || item.typeName === typeFilter;
+    return matchesSearch && matchesType;
+  });
+
+  renderInventoryRows(filtered);
+}
+
+function buildTypeFilterMenu(types) {
+  const filterMenu = document.getElementById('filter-type-menu');
+  filterMenu.innerHTML = '';
+  const allRow = document.createElement('button');
+  allRow.type = 'button';
+  allRow.className = 'dropdown-item';
+  allRow.textContent = 'All';
+  allRow.addEventListener('click', () => {
+    window.typeFilter = 'All';
+    document.getElementById('filter-type-toggle').textContent = 'All ▾';
+    filterMenu.classList.add('hidden');
+    applyInventoryFilters();
+  });
+  filterMenu.appendChild(allRow);
+
+  types.forEach(typeName => {
+    const itemBtn = document.createElement('button');
+    itemBtn.type = 'button';
+    itemBtn.className = 'dropdown-item';
+    itemBtn.textContent = typeName;
+    itemBtn.addEventListener('click', () => {
+      window.typeFilter = typeName;
+      document.getElementById('filter-type-toggle').textContent = `${typeName} ▾`;
+      filterMenu.classList.add('hidden');
+      applyInventoryFilters();
+    });
+    filterMenu.appendChild(itemBtn);
+  });
+}
+
+function setSearchType(typeLabel, fieldName) {
+  window.searchField = fieldName;
+  document.getElementById('search-type-toggle').textContent = `${typeLabel} ▾`;
+}
+
+function toggleDropdown(menuId) {
+  const menu = document.getElementById(menuId);
+  if (!menu) return;
+  menu.classList.toggle('hidden');
+}
+
+function closeDropdowns() {
+  document.getElementById('search-type-menu')?.classList.add('hidden');
+  document.getElementById('filter-type-menu')?.classList.add('hidden');
+}
+
+function updateSelectAllState() {
+  const allCheckboxes = Array.from(document.querySelectorAll('.row-select'));
+  if (!allCheckboxes.length) return;
+  const selectedCount = allCheckboxes.filter(cb => cb.checked).length;
+  const selectAll = document.getElementById('select-all');
+  selectAll.checked = selectedCount === allCheckboxes.length;
+  selectAll.indeterminate = selectedCount > 0 && selectedCount < allCheckboxes.length;
+}
+
+function getSelectedRows() {
+  return Array.from(document.querySelectorAll('.row-select:checked')).map(cb => cb.closest('tr'));
+}
+
+async function bulkSaveSelected() {
+  const rows = getSelectedRows();
+  if (!rows.length) {
+    alert('No selected rows to save.');
+    return;
+  }
+  for (const row of rows) {
+    const originalId = row.dataset.originalid || row.dataset.originalId || row.dataset.id;
+    await saveRow(originalId, row);
+  }
+  alert('Selected rows saved');
+}
+
+async function saveRow(originalId, row) {
+  const canEditId = window.currentUser?.privilege >= 3;
   const name = row.querySelector('input[data-field="name"]').value.trim();
   const sn = row.querySelector('input[data-field="sn"]').value.trim();
-  // support select for type when admin; fall back to input if present
+  const idField = row.querySelector('input[data-field="id"]');
+  const newId = idField ? idField.value.trim() : originalId;
   const typeSelect = row.querySelector('select[data-field="type"]');
   const typeID = typeSelect ? (typeSelect.value || '').trim() : (row.querySelector('input[data-field="type"]')?.value.trim() || '');
 
-  // update assets collection (typeID field is used for types)
-  await updateDoc(doc(db, 'assets', id), {
-    name,
-    sn,
-    typeID
-  });
-  // update tracking: date and owner if present
+  if (!newId) {
+    alert('Asset ID cannot be empty.');
+    return;
+  }
+
+  const assetData = { name, sn, typeID };
+  if (newId !== originalId) {
+    const existing = await getDoc(doc(db, 'assets', newId));
+    if (existing.exists()) {
+      alert(`Asset ID already exists: ${newId}`);
+      return;
+    }
+    await setDoc(doc(db, 'assets', newId), assetData);
+    await deleteDoc(doc(db, 'assets', originalId));
+
+    const detailSnap = await getDoc(doc(db, 'details', originalId));
+    if (detailSnap.exists()) {
+      await setDoc(doc(db, 'details', newId), detailSnap.data());
+      await deleteDoc(doc(db, 'details', originalId));
+    }
+  } else {
+    await updateDoc(doc(db, 'assets', originalId), assetData);
+  }
+
   const dateInput = row.querySelector('input[data-field="date"]');
   const ownerSelect = row.querySelector('select[data-field="owner"]');
   let trackUpdate = {};
@@ -192,19 +328,32 @@ async function saveRow(id, row) {
     trackUpdate.ownerID = ownerId;
   }
   if (Object.keys(trackUpdate).length > 0) {
-    trackUpdate.assetsID = id;
-    await setDoc(doc(db, 'tracking', id), trackUpdate, { merge: true });
+    trackUpdate.assetsID = newId;
+    await setDoc(doc(db, 'tracking', newId), trackUpdate, { merge: true });
+    if (newId !== originalId) {
+      const oldTrack = await getDoc(doc(db, 'tracking', originalId));
+      if (oldTrack.exists()) {
+        await deleteDoc(doc(db, 'tracking', originalId));
+      }
+    }
+  } else if (newId !== originalId) {
+    const oldTrack = await getDoc(doc(db, 'tracking', originalId));
+    if (oldTrack.exists()) {
+      await setDoc(doc(db, 'tracking', newId), oldTrack.data(), { merge: true });
+      await deleteDoc(doc(db, 'tracking', originalId));
+    }
   }
+
   await loadInventory();
 }
 
 function normalizeRole(rawRole) {
   const r = String(rawRole || '').trim().toLowerCase();
-  if (r === 'super admin' || r === 'super-admin' || r === 'superadmin' || r === 'super_admin') {
+  if (r === '4' || r === 'super admin' || r === 'super-admin' || r === 'superadmin' || r === 'super_admin') {
     return 'super-admin';
   }
-  if (r === 'admin') return 'admin';
-  if (r === 'editor') return 'editor';
+  if (r === '3' || r === 'admin') return 'admin';
+  if (r === '2' || r === 'editor') return 'editor';
   return 'viewer';
 }
 
@@ -407,28 +556,62 @@ window.addEventListener('DOMContentLoaded', async () => {
     await loadOwners();
   }
 
-  document.getElementById('inventory-table').addEventListener('click', async event => {
-    if (event.target.matches('.save-row-btn')) {
-      const row = event.target.closest('tr');
-      const id = row.dataset.id;
-      await saveRow(id, row);
-      alert('Inventory row saved');
-    }
+  document.getElementById('inventory-table').addEventListener('click', event => {
     if (event.target.matches('.date-display-btn')) {
       const btn = event.target;
       const row = btn.closest('tr');
       const input = row.querySelector('input[data-field="date"]');
       if (!input) return;
-      // toggle visibility and focus
       const visible = input.style.display !== 'none';
       input.style.display = visible ? 'none' : '';
       if (!visible) {
         input.focus();
-        // when input value changes, update button label immediately for feedback
         input.addEventListener('change', () => {
           btn.textContent = formatDate(isoToIntDate(input.value) || input.value);
         }, { once: false });
       }
+    }
+  });
+
+  document.getElementById('inventory-table').addEventListener('change', event => {
+    if (event.target.matches('.row-select')) {
+      const id = event.target.dataset.id;
+      if (!window.selectedAssets) window.selectedAssets = new Set();
+      if (event.target.checked) window.selectedAssets.add(id);
+      else window.selectedAssets.delete(id);
+      updateSelectAllState();
+    }
+  });
+
+  document.getElementById('select-all').addEventListener('change', event => {
+    const checked = event.target.checked;
+    document.querySelectorAll('.row-select').forEach(cb => {
+      cb.checked = checked;
+      if (!window.selectedAssets) window.selectedAssets = new Set();
+      if (checked) window.selectedAssets.add(cb.dataset.id);
+      else window.selectedAssets.delete(cb.dataset.id);
+    });
+    updateSelectAllState();
+  });
+
+  document.getElementById('bulk-save-btn').addEventListener('click', bulkSaveSelected);
+  document.getElementById('search-btn').addEventListener('click', applyInventoryFilters);
+  document.getElementById('search-type-toggle').addEventListener('click', () => toggleDropdown('search-type-menu'));
+  document.getElementById('filter-type-toggle').addEventListener('click', () => toggleDropdown('filter-type-menu'));
+
+  document.querySelectorAll('#search-type-menu .dropdown-item').forEach(button => {
+    button.addEventListener('click', () => {
+      setSearchType(button.textContent.trim(), button.dataset.field);
+      document.getElementById('search-type-menu').classList.add('hidden');
+    });
+  });
+
+  document.addEventListener('click', event => {
+    if (!event.target.closest('.search-type-select') && !event.target.closest('#search-type-toggle')) {
+      document.getElementById('search-type-menu').classList.add('hidden');
+    }
+    if (!event.target.closest('.filter-type-dropdown') && !event.target.closest('#filter-type-toggle')) {
+      document.getElementById('filter-type-menu').classList.add('hidden');
     }
   });
 
