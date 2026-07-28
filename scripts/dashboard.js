@@ -94,6 +94,7 @@ function buildInventoryRow(item, typeName, track, typeOptionsHtml, ownersOptions
     <td>
       ${canEdit ? `<select class="cell-input" data-field="owner">${ownersOptionsHtml}</select>` : `${track?.ownerName || '-'}`}
     </td>
+    <td><button type="button" class="green-btn detail-row-btn" data-id="${item.id}">Chi tiết</button></td>
   `;
 
   // If editable select, set selected value to the asset's typeID
@@ -130,9 +131,11 @@ async function loadInventory() {
   });
   // build options html for admin selects
   let typeOptionsHtml = '';
+  const typeDetails = {};
   typeSnapshot.forEach(docSnap => {
     const value = docSnap.data();
     const name = value.name || docSnap.id;
+    typeDetails[docSnap.id] = value;
     typeOptionsHtml += `<option value="${docSnap.id}">${name}</option>`;
   });
   let ownersOptionsHtml = '';
@@ -170,6 +173,7 @@ async function loadInventory() {
 
   window.inventoryData = inventoryItems;
   window.typeNames = typeNames;
+  window.typeDetails = typeDetails;
   window.inventoryTypeOptionsHtml = typeOptionsHtml;
   window.ownersOptionsHtml = ownersOptionsHtml;
   window.availableTypes = typeSnapshot.docs.map(docSnap => docSnap.data().name || docSnap.id).sort((a,b) => a.localeCompare(b));
@@ -347,6 +351,115 @@ async function saveRow(originalId, row) {
   await loadInventory();
 }
 
+async function openDetailDrawer(assetId) {
+  let item = (window.inventoryData || []).find(entry => entry.id === assetId);
+  if (!item) {
+    item = (window.inventoryData || []).find(entry => entry.detailID === assetId || entry.assetID === assetId);
+  }
+  if (!item) return;
+
+  const detailDoc = await getDoc(doc(db, 'details', assetId));
+  const detailData = detailDoc.exists() ? detailDoc.data() : {};
+  renderDetailDrawer(item, detailData);
+  const drawer = document.getElementById('detail-drawer');
+  drawer.classList.remove('hidden');
+  drawer.classList.add('open');
+}
+
+function closeDetailDrawer() {
+  const drawer = document.getElementById('detail-drawer');
+  drawer.classList.add('hidden');
+  drawer.classList.remove('open');
+}
+
+function renderDetailDrawer(item, detailData) {
+  const canEdit = canEditData(window.currentUser?.privilege);
+  const content = document.getElementById('detail-drawer-content');
+  const typeId = item.typeID || item.type || item.typeId || item.detailID;
+  const typeName = window.typeNames?.[typeId] || item.typeName || item.type || item.typeID || '-';
+  let typeDef = window.typeDetails?.[typeId] || {};
+
+  if (!typeDef.value && typeName && window.typeDetails) {
+    typeDef = Object.values(window.typeDetails).find(typeItem => String(typeItem.name || '').trim().toLowerCase() === String(typeName).trim().toLowerCase()) || typeDef;
+  }
+
+  let valueFields = [];
+  if (typeDef.value) {
+    if (Array.isArray(typeDef.value)) {
+      valueFields = typeDef.value.map(v => String(v).trim()).filter(Boolean);
+    } else if (typeof typeDef.value === 'string') {
+      valueFields = typeDef.value.split(',').map(v => v.trim()).filter(Boolean);
+    }
+  }
+
+  if (!valueFields.length && detailData && typeof detailData === 'object') {
+    valueFields = Object.keys(detailData).filter(key => key !== 'assetID' && key !== 'id');
+  }
+
+  let html = `
+    <div class="detail-summary">
+      <div><strong>Asset:</strong> ${item.id}</div>
+      <div><strong>Name:</strong> ${item.name || '-'}</div>
+      <div><strong>Type:</strong> ${typeName || '-'}</div>
+    </div>
+  `;
+
+  if (!valueFields.length) {
+    html += `
+      <div class="detail-row">
+        <label>Detail fields</label>
+        <div class="field-value">No detail fields configured for this type.</div>
+      </div>
+    `;
+  } else {
+    valueFields.forEach(fieldName => {
+      const value = detailData[fieldName] || '';
+      if (canEdit) {
+        html += `
+          <div class="detail-row">
+            <label>${fieldName}</label>
+            <input type="text" class="detail-field" data-field="${fieldName}" value="${value}">
+          </div>
+        `;
+      } else {
+        html += `
+          <div class="detail-row">
+            <label>${fieldName}</label>
+            <div class="field-value">${value || '-'}</div>
+          </div>
+        `;
+      }
+    });
+  }
+
+  if (canEdit && valueFields.length) {
+    html += `
+      <div class="detail-drawer-actions">
+        <button id="detail-save-btn" class="green-btn" data-asset-id="${item.id}">Save changes</button>
+      </div>
+    `;
+  }
+
+  content.innerHTML = html;
+}
+
+async function saveDetailDrawer(assetId) {
+  const drawer = document.getElementById('detail-drawer');
+  const inputs = Array.from(drawer.querySelectorAll('.detail-field'));
+  const data = {};
+  inputs.forEach(input => {
+    const key = input.dataset.field;
+    let value = input.value;
+    if (input.type === 'date') {
+      value = isoToIntDate(value) || value;
+    }
+    data[key] = value;
+  });
+
+  await setDoc(doc(db, 'details', assetId), data, { merge: true });
+  closeDetailDrawer();
+}
+
 function normalizeRole(rawRole) {
   const r = String(rawRole || '').trim().toLowerCase();
   if (r === '4' || r === 'super admin' || r === 'super-admin' || r === 'superadmin' || r === 'super_admin') {
@@ -362,14 +475,10 @@ function setPrivilegeSections(privilege) {
   const viewOnly = document.getElementById('priv-view-only');
   if (privilege >= 3) {
     admin.classList.remove('hidden');
-    viewOnly.classList.add('hidden');
+    viewOnly?.classList.add('hidden');
   } else {
     admin.classList.add('hidden');
-    if (privilege === 1) {
-      viewOnly.classList.remove('hidden');
-    } else {
-      viewOnly.classList.add('hidden');
-    }
+    viewOnly?.classList.add('hidden');
   }
 }
 
@@ -383,6 +492,17 @@ function roleToPrivilege(role) {
 
 function canEditData(privilege) {
   return privilege >= 2;
+}
+
+function getManageableRoleOptions(currentRole) {
+  const currentPrivilege = roleToPrivilege(currentRole);
+  if (currentPrivilege === 4) {
+    return ['viewer', 'editor', 'admin', 'super-admin'];
+  }
+  if (currentPrivilege === 3) {
+    return ['viewer', 'editor'];
+  }
+  return [];
 }
 
 function canManageUsers(currentRole, targetRole) {
@@ -427,12 +547,12 @@ async function loadUsers() {
     let updateButton = isSelf ? '<button class="update-user-btn" disabled>Update</button>' : '';
 
     if (canManage) {
+      const options = getManageableRoleOptions(currentRole);
       privilegeControl = `
         <select data-username="${username}" class="privilege-select">
-          <option value="viewer" ${targetRole === 'viewer' ? 'selected' : ''}>Viewer</option>
-          <option value="editor" ${targetRole === 'editor' ? 'selected' : ''}>Editor</option>
-          ${currentRole === 'super-admin' ? `<option value="admin" ${targetRole === 'admin' ? 'selected' : ''}>Admin</option>` : ''}
-          ${currentRole === 'super-admin' ? `<option value="super-admin" ${targetRole === 'super-admin' ? 'selected' : ''}>Super Admin</option>` : ''}
+          ${options.map(option => `
+            <option value="${option}" ${targetRole === option ? 'selected' : ''}>${roleDisplay(option)}</option>
+          `).join('')}
         </select>
       `;
       updateButton = `<button class="update-user-btn green-btn" data-username="${username}">Update</button>`;
@@ -556,7 +676,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     await loadOwners();
   }
 
-  document.getElementById('inventory-table').addEventListener('click', event => {
+  document.getElementById('inventory-table').addEventListener('click', async event => {
     if (event.target.matches('.date-display-btn')) {
       const btn = event.target;
       const row = btn.closest('tr');
@@ -570,6 +690,10 @@ window.addEventListener('DOMContentLoaded', async () => {
           btn.textContent = formatDate(isoToIntDate(input.value) || input.value);
         }, { once: false });
       }
+    }
+    if (event.target.matches('.detail-row-btn')) {
+      const assetId = event.target.dataset.id;
+      await openDetailDrawer(assetId);
     }
   });
 
@@ -598,6 +722,18 @@ window.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('search-btn').addEventListener('click', applyInventoryFilters);
   document.getElementById('search-type-toggle').addEventListener('click', () => toggleDropdown('search-type-menu'));
   document.getElementById('filter-type-toggle').addEventListener('click', () => toggleDropdown('filter-type-menu'));
+  const detailCloseBtn = document.getElementById('detail-close-btn');
+  if (detailCloseBtn) {
+    detailCloseBtn.addEventListener('click', event => {
+      event.stopPropagation();
+      closeDetailDrawer();
+    });
+  }
+  document.getElementById('detail-drawer').addEventListener('click', event => {
+    if (event.target.id === 'detail-drawer') {
+      closeDetailDrawer();
+    }
+  });
 
   document.querySelectorAll('#search-type-menu .dropdown-item').forEach(button => {
     button.addEventListener('click', () => {
@@ -612,6 +748,14 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
     if (!event.target.closest('.filter-type-dropdown') && !event.target.closest('#filter-type-toggle')) {
       document.getElementById('filter-type-menu').classList.add('hidden');
+    }
+  });
+
+  document.body.addEventListener('click', async event => {
+    if (event.target.matches('#detail-save-btn')) {
+      const assetId = event.target.dataset.assetId;
+      await saveDetailDrawer(assetId);
+      alert('Detail saved');
     }
   });
 

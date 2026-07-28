@@ -12,9 +12,9 @@
     <header class="dashboard-header">
       <div>
         <h1>QUẢN LÝ KHO</h1>
-        <p>Chào mừng, <strong id="user-name"></strong> (<span id="user-privilege"></span>)</p>
+        <p class="welcome-user">Chào mừng, <strong id="user-name"></strong> (<span id="user-privilege"></span>)</p>
       </div>
-      <button id="logout-btn" class="primary-btn green-btn">Logout</button>
+      <button id="logout-btn" class="green-btn">Logout</button>
     </header>
 
     <div class="content-container">
@@ -33,7 +33,7 @@
               </div>
             </div>
           </div>
-          <button id="search-btn" class="secondary-btn">Search</button>
+          <button id="search-btn" class="green-btn">Search</button>
           <div class="filter-type-dropdown">
             <button id="filter-type-toggle" class="dropdown-btn">All ▾</button>
             <div id="filter-type-menu" class="dropdown-menu hidden"></div>
@@ -51,20 +51,20 @@
               <th class="col-s4">Loại</th>
               <th class="col-s5">Ngày sử dụng</th>
               <th class="col-s6">Bên sử dụng</th>
-              <th class="col-s7 actions-header"><button id="bulk-save-btn" class="primary-btn green-btn">Save</button></th>
+              <th class="col-s7 actions-header"><button id="bulk-save-btn" class="green-btn">Save</button></th>
             </tr>
           </thead>
           <tbody></tbody>
         </table>
       </div>
-      <div class="table-actions hidden">
-        <button id="bulk-save-btn" class="primary-btn green-btn">Save selected</button>
-      </div>
     </section>
-      <section id="priv-view-only" class="section-card hidden">
-        <h2>Chế độ xem</h2>
-        <p>Bạn chỉ có quyền xem dữ liệu. Nếu muốn chỉnh sửa, cần tài khoản có quyền Editor.</p>
-      </section>
+      <div id="detail-drawer" class="detail-drawer hidden">
+        <div class="detail-drawer-header">
+          <h2>Detail</h2>
+          <button id="detail-close-btn" class="secondary-btn">Close</button>
+        </div>
+        <div id="detail-drawer-content" class="detail-drawer-content"></div>
+      </div>
 
       <div id="admin-panel" class="hidden">
         <section class="section-card">
