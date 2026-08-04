@@ -8,6 +8,24 @@ html {
     font-size: 16px;
 }
 
+@keyframes spin-2 {
+    0% {
+        transform: rotate(0deg);
+    }
+    25% {
+        transform: rotate(180deg);
+    }
+    50% {
+        transform: rotate(0);
+    }
+    75% {
+        transform: rotate(-180deg)
+    }
+    100% {
+        transform: rotate(0deg);
+    }
+}
+
 body {
     font-family: Courier, sans-serif;
     background-color: #f4f4f4;
@@ -664,4 +682,20 @@ button.inline-btn {
 
 .col-s7 {
     width: 3%;
+}
+
+.menu-btn-style {
+    background-color: transparent;
+    padding: 0.1rem;
+    margin: 0;
+    border: none;
+}
+
+.menu-btn-style:hover .menu-ico-style {
+    animation: spin-2 3s linear infinite;
+    transition: transform 0.5s ease;
+}
+
+.menu-ico-style {
+    font-size: 1.5rem;
 }
