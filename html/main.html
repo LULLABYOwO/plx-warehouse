@@ -10,81 +10,68 @@
 <body>
   <div class="dashboard-shell">
     <header class="dashboard-header">
-      <div>
+      <div class="header-brand">
         <h1>QUẢN LÝ KHO</h1>
         <p class="welcome-user">Chào mừng, <strong id="user-name"></strong> (<span id="user-privilege"></span>)</p>
       </div>
-      <button id="logout-btn" class="green-btn">Logout</button>
+      <div class="header-actions">
+        <button id="menu-toggle-btn" class="green-btn">Menu</button>
+        <button id="logout-btn" class="green-btn">Logout</button>
+      </div>
+      <div id="main-menu" class="main-menu hidden" role="menu">
+        <button type="button" class="menu-item" data-menu="users">Quản lý người dùng</button>
+        <button type="button" class="menu-item" data-menu="types">Quản lý loại tài sản</button>
+        <button type="button" class="menu-item" data-menu="owners">Quản lý chủ sở hữu</button>
+      </div>
     </header>
-
     <div class="content-container">
       <section class="section-card">
-        <h2>Inventory</h2>
-      <div class="inventory-controls">
-        <div class="search-group">
-          <div class="search-field">
-            <input id="inventory-search" type="text" placeholder="Search inventory..." />
-            <div class="search-type-select">
-              <button id="search-type-toggle" class="dropdown-btn">Tên ▾</button>
-              <div id="search-type-menu" class="dropdown-menu hidden">
-                <button type="button" class="dropdown-item" data-field="name">Tên</button>
-                <button type="button" class="dropdown-item" data-field="id">Số thẻ</button>
-                <button type="button" class="dropdown-item" data-field="sn">Số seri</button>
+        <div class="search-panel">
+          <div class="search-group">
+            <div class="search-field">
+              <input id="inventory-search" type="text" placeholder="Search inventory..." />
+              <div class="search-type-select">
+                <button id="search-type-toggle" class="dropdown-btn">Tên ▾</button>
+                <div id="search-type-menu" class="dropdown-menu hidden">
+                  <button type="button" class="dropdown-item" data-field="name">Tên</button>
+                  <button type="button" class="dropdown-item" data-field="id">Số thẻ</button>
+                  <button type="button" class="dropdown-item" data-field="sn">Số seri</button>
+                </div>
               </div>
             </div>
-          </div>
-          <button id="search-btn" class="green-btn">Search</button>
-          <div class="filter-type-dropdown">
-            <button id="filter-type-toggle" class="dropdown-btn">All ▾</button>
-            <div id="filter-type-menu" class="dropdown-menu hidden"></div>
+            <button id="search-btn" class="green-btn">Search</button>
+            <div class="filter-type-dropdown">
+              <button id="filter-type-toggle" class="dropdown-btn">All ▾</button>
+              <div id="filter-type-menu" class="dropdown-menu hidden"></div>
+            </div>
+            <button id="inventory-add-btn" class="green-btn">Add</button>
+            <button id="inventory-delete-btn" class="green-btn">Delete</button>
           </div>
         </div>
-      </div>
-      <div class="table-wrapper">
-        <table id="inventory-table">
-          <thead>
-            <tr>
-              <th class="col-s0"><input id="select-all" type="checkbox" aria-label="Select all assets" /></th>
-              <th class="col-s1">Số thẻ</th>
-              <th class="col-s2">Tên</th>
-              <th class="col-s3">Số seri</th>
-              <th class="col-s4">Loại</th>
-              <th class="col-s5">Ngày sử dụng</th>
-              <th class="col-s6">Bên sử dụng</th>
-              <th class="col-s7 actions-header"><button id="bulk-save-btn" class="green-btn">Save</button></th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </section>
+        <div class="table-wrapper">
+          <table id="inventory-table">
+            <thead>
+              <tr>
+                <th class="col-s0"><input id="select-all" type="checkbox" aria-label="Select all assets" /></th>
+                <th class="col-s1">Số thẻ</th>
+                <th class="col-s2">Tên</th>
+                <th class="col-s3">Số seri</th>
+                <th class="col-s4">Loại</th>
+                <th class="col-s5">Ngày sử dụng</th>
+                <th class="col-s6">Bên sử dụng</th>
+                <th class="col-s7 actions-header"><button id="bulk-save-btn" class="green-btn">Save</button></th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
       <div id="detail-drawer" class="detail-drawer hidden">
         <div class="detail-drawer-header">
           <h2>Detail</h2>
           <button id="detail-close-btn" class="secondary-btn">Close</button>
         </div>
         <div id="detail-drawer-content" class="detail-drawer-content"></div>
-      </div>
-
-      <div id="admin-panel" class="hidden">
-        <section class="section-card">
-          <h2>Quản lý người dùng</h2>
-          <div id="user-management-list" class="list-grid"></div>
-        </section>
-
-        <section class="section-card">
-          <h2>Quản lý loại tài sản</h2>
-          <div id="type-management-list" class="list-grid"></div>
-        </section>
-
-        <section class="section-card">
-          <h2>Quản lý chủ sở hữu</h2>
-          <div class="owner-add-form">
-            <input id="new-owner-name" type="text" placeholder="New owner name" />
-            <button id="owner-add-btn" class="secondary-btn green-btn">Add Owner</button>
-          </div>
-          <div id="owner-management-list" class="list-grid"></div>
-        </section>
       </div>
     </div>
   </div>
